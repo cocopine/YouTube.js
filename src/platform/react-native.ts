@@ -1,9 +1,10 @@
 // React Native Platform Support
+import package_json from '../../package.json' assert { type: 'json' };
 import type { ICache } from '../types/Cache.js';
 import { Platform } from '../utils/Utils.js';
-import sha1Hash from './polyfills/web-crypto.js';
-import package_json from '../../package.json' assert { type: 'json' };
 import evaluate from './jsruntime/jinter.js';
+import Innertube from './lib.js';
+import sha1Hash from './polyfills/web-crypto.js';
 
 class Cache implements ICache {
   #persistent_directory: string;
@@ -28,9 +29,16 @@ class Cache implements ICache {
     return storage.getBuffer(key)?.buffer;
   }
 
-  async set(key: string, value: ArrayBuffer) {
+  async set(key: string, value: unknown) {
     const storage = this.#getStorage();
-    storage.set(key, new Uint8Array(value));
+    let buffer: ArrayBuffer;
+    if (value instanceof ArrayBuffer) {
+      buffer = value;
+    } else {
+      const encoded = new TextEncoder().encode(JSON.stringify(value));
+      buffer = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength) as ArrayBuffer;
+    }
+    storage.set(key, new Uint8Array(buffer));
   }
 
   async remove(key: string) {
@@ -75,5 +83,4 @@ Platform.load({
 });
 
 export * from './lib.js';
-import Innertube from './lib.js';
 export default Innertube;
